@@ -1,7 +1,10 @@
 package com.garage.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +36,7 @@ public class PartServiceImpl implements PartService{
     @Autowired
     private InventoryAuditService inventoryAuditService;
 
+    private static final BigDecimal discountPercent = new BigDecimal(10);
     public Part savePart(Part part) {
     	Part response = partRepository.save(part);
         InventoryAudit inventoryAudit = InventoryAudit.builder()
@@ -62,6 +66,8 @@ public class PartServiceImpl implements PartService{
 			order.setOrderQty(qty);
 			order.setStatus("Placed");
 			order.setOrderDate(new Timestamp(Instant.now().toEpochMilli()));
+			order.setTotalAmount(calculateTotalAmount(qty, part));
+			order.setDiscount(calculateDiscountAmount(qty, part));
 			response = orderRepository.save(order);
 			if (response != null) {
 				availableQuantity = part.getAvailableQty() - qty;
@@ -84,6 +90,28 @@ public class PartServiceImpl implements PartService{
 		
 		return response;
 	}
+	private Long calculateTotalAmount(Integer qty, Part part) {
+		// TODO Auto-generated method stub
+		return Math.multiplyExact(qty, part.getUnitPrice())-calculateDiscountAmount(qty, part);
+	}
+	private long calculateDiscountAmount(Integer qty, Part part) {
+		if(part.getSupplier().getSupplierID()==1 || !isDiscountApplicable(part.getSupplier().getSupplierID())) {
+			return 0;
+		}
+		Long totalBillAmount = Math.multiplyExact(qty, part.getUnitPrice());
+        BigDecimal totalDecimal = BigDecimal.valueOf(totalBillAmount);
+        return totalDecimal.multiply(discountPercent).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP).longValue();
+	}
+	public static boolean isDiscountApplicable(int supplierId) {
+        LocalTime now = LocalTime.now();
+        LocalTime startTime = LocalTime.of(0, 0);  // 12:00 AM
+        LocalTime endTime = LocalTime.of(1, 0);    // 01:00 AM
+
+        if (supplierId == 2) {
+            return now.isAfter(startTime) && now.isBefore(endTime);
+        }
+        return false;  // Supplier-A can be ordered anytime
+    }
 	@Override
 	public List<Part> getAllParts() {
 		return partRepository.findAll();

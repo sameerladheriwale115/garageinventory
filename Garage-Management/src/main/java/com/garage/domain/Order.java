@@ -1,7 +1,9 @@
 package com.garage.domain;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -27,6 +29,9 @@ public class Order {
     private Timestamp orderDate;
     private int orderQty;
     private String status;
+   // @Column(nullable = false)
+    private Long totalAmount;
+    private Long discount;
     
     // Getters and Setters
 }
